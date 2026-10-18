@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6c4cf1">
+  <meta name="description" content="Ich seh's! – das gemeinsame Bilder-Ratespiel.">
+  <title>Ich seh's! – Online-Spiel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">👀</div>
+      <div>
+        <p class="eyebrow">DAS BILDER-RATESPIEL</p>
+        <h1>Ich seh's<span>!</span></h1>
+      </div>
+      <div class="online-pill"><span class="status-dot"></span> Gemeinsam spielen</div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">SCHAU GENAU HIN</p>
+        <h2>Ein Bild.<br><span>Viele Ideen.</span></h2>
+        <p>Spiele mit Freunden, entdecke Details und sammle Punkte. Ganz einfach per Raumcode.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-card art-card-back">🌈</div>
+        <div class="art-card art-card-front"><span>🔎</span><b>Was siehst du?</b><small>60 Sekunden</small></div>
+        <span class="spark spark-one">✦</span><span class="spark spark-two">✳</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="start-title">
+      <div class="section-heading">
+        <span class="step-number">1</span>
+        <div><h2 id="start-title">Wie möchtest du spielen?</h2><p>Wähle einen Modus für deine Runde.</p></div>
+      </div>
+      <div class="mode-grid">
+        <button class="mode-card selected" type="button" data-mode="see">
+          <span class="mode-icon">🎨</span><span class="mode-title">Ich sehe was …</span>
+          <span class="mode-description">Beschreibe etwas im Bild – die anderen raten.</span>
+          <span class="mode-check">✓</span>
+        </button>
+        <button class="mode-card" type="button" data-mode="detail">
+          <span class="mode-icon">🔍</span><span class="mode-title">Finde das Detail</span>
+          <span class="mode-description">Finde die Stelle, die gemeint ist.</span>
+          <span class="mode-check">✓</span>
+        </button>
+      </div>
+
+      <div class="section-heading second-heading">
+        <span class="step-number">2</span>
+        <div><h2>Wer bist du?</h2><p>Eine Registrierung ist nicht nötig.</p></div>
+      </div>
+      <label class="field-label" for="player-name">Dein Spielername</label>
+      <input id="player-name" class="text-field" maxlength="20" autocomplete="nickname" placeholder="z. B. Alex">
+
+      <div class="action-grid">
+        <button id="create-room" class="primary-button" type="button"><span>＋</span> Neuen Raum erstellen</button>
+        <div class="join-box">
+          <label class="field-label" for="room-code">Du hast einen Raumcode?</label>
+          <div class="join-row"><input id="room-code" class="text-field code-field" maxlength="8" placeholder="RAUMCODE" autocomplete="off"><button id="join-room" class="secondary-button" type="button">Beitreten</button></div>
+        </div>
+      </div>
+      <p id="message" class="message" role="status" aria-live="polite">Wähle einen Modus und gib deinen Namen ein.</p>
+    </section>
+
+    <section id="room-panel" class="panel room-panel hidden" aria-live="polite">
+      <div class="room-top"><div><p class="eyebrow">DEIN SPIELRAUM</p><h2 id="room-title">Raum bereit</h2></div><span class="room-badge">Vorschau</span></div>
+      <p class="room-explainer">Diese Oberfläche ist vorbereitet. Die echte Online-Raumverwaltung wird im nächsten Schritt mit Supabase verbunden.</p>
+      <div class="room-code-card"><span>RAUMCODE</span><strong id="shown-code">———</strong><button id="copy-code" type="button" class="copy-button">Code kopieren</button></div>
+      <div class="room-player"><span class="avatar">🙂</span><span><b id="shown-player">Spieler</b><small>Du bist dabei</small></span><span class="you-tag">DU</span></div>
+      <div class="room-actions"><button id="back-home" class="secondary-button" type="button">Zurück</button></div>
+    </section>
+
+    <footer><span>👀 Ich seh's!</span><span>Gemeinsam entdecken macht mehr Spaß.</span></footer>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
