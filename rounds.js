@@ -92,7 +92,7 @@
   function inspectRoom() {
     const panel = $("#room-panel");
     if (!panel || panel.classList.contains("hidden")) { if (refreshTimer) clearInterval(refreshTimer); refreshTimer = null; lastRoomCode = ""; lastPlayerName = ""; isHost = false; return; }
-    const code = ($("#shown-code")?.textContent || "").trim(); const player = ($("#shown-player")?.textContent || "").trim();
+    const code = ($("#shown-code")?.textContent || "").trim(); const player = ($("#player-name")?.value || "").trim();
     if (!code || code === "———" || !player) return;
     const changed = code !== lastRoomCode || player !== lastPlayerName;
     lastRoomCode = code; lastPlayerName = player;
