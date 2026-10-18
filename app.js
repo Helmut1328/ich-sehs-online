@@ -87,8 +87,9 @@
   function renderPlayers(players) {
     // Wichtig: Die vorherige Liste vollständig entfernen, nicht nur ihre Spielerzeilen.
     // Sonst bleibt bei jedem 5-Sekunden-Refresh eine weitere Überschrift stehen.
-    const previousList = $("#room-player-list");
-    if (previousList) previousList.remove();
+    // Es können bereits mehrere Elemente mit derselben ID vorhanden sein.
+    // Deshalb ALLE alten Listen entfernen, nicht nur die erste gefundene.
+    roomPanel.querySelectorAll("#room-player-list").forEach((list) => list.remove());
 
     // Entfernt gegebenenfalls die statische Beispielzeile aus dem HTML.
     roomPanel.querySelectorAll(".room-player").forEach((row) => row.remove());
