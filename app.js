@@ -85,8 +85,13 @@
   }
 
   function renderPlayers(players) {
-    const oldRows = roomPanel.querySelectorAll(".room-player");
-    oldRows.forEach((row) => row.remove());
+    // Wichtig: Die vorherige Liste vollständig entfernen, nicht nur ihre Spielerzeilen.
+    // Sonst bleibt bei jedem 5-Sekunden-Refresh eine weitere Überschrift stehen.
+    const previousList = $("#room-player-list");
+    if (previousList) previousList.remove();
+
+    // Entfernt gegebenenfalls die statische Beispielzeile aus dem HTML.
+    roomPanel.querySelectorAll(".room-player").forEach((row) => row.remove());
 
     const roomActions = roomPanel.querySelector(".room-actions");
     const list = document.createElement("div");
@@ -251,6 +256,5 @@
       .catch((error) => console.warn("Aufruf konnte nicht gezählt werden:", error));
   }
 
-  // Auswahl des Spielmodus ist bereits vorbereitet; die Spielrunden selbst folgen später.
   console.info(`Ich seh's! bereit. Gewählter Modus: ${selectedMode}`);
 })();
