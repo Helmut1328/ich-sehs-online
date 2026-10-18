@@ -4,12 +4,144 @@
   const codeInput = $("#room-code");
   const message = $("#message");
   const roomPanel = $("#room-panel");
-  let selectedMode = "see";
 
-  const setMessage = (text, kind = "") => {
+  let selectedMode = "see";
+  let activeRoomCode = null;
+  let refreshTimer = null;
+
+  const config = window.GAME_CONFIG || {};
+  const supabaseUrl = (config.SUPABASE_URL || "").replace(/\/+$/, "");
+  const publicKey = config.SUPABASE_PUBLISHABLE_KEY || "";
+
+  function setMessage(text, kind = "") {
     message.textContent = text;
     message.className = `message ${kind}`.trim();
-  };
+  }
+
+  function getPlayerName() {
+    return nameInput.value.trim().slice(0, 20);
+  }
+
+  function checkConfig() {
+    if (!supabaseUrl || !publicKey || publicKey.includes("HIER_DEINEN")) {
+      throw new Error("Die Supabase-Konfiguration fehlt noch. Bitte prüfe config.js und trage dort den öffentlichen Publishable-/anon-Key ein.");
+    }
+  }
+
+  async function rpc(functionName, parameters) {
+    checkConfig();
+
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/${functionName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": publicKey,
+          "Authorization": `Bearer ${publicKey}`
+        },
+        body: JSON.stringify(parameters)
+      }
+    );
+
+    const raw = await response.text();
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = raw;
+    }
+
+    if (!response.ok) {
+      const detail = data && typeof data === "object"
+        ? (data.message || data.details || data.hint || JSON.stringify(data))
+        : String(data || `HTTP ${response.status}`);
+      throw new Error(detail);
+    }
+    return data;
+  }
+
+  function stopRefresh() {
+    if (refreshTimer !== null) {
+      window.clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
+  }
+
+  function showRoomPanel(roomCode, playerName, status = "waiting") {
+    activeRoomCode = roomCode;
+    $("#shown-code").textContent = roomCode;
+    $("#shown-player").textContent = playerName;
+    $("#room-title").textContent = status === "waiting" ? "Warte auf Mitspieler" : "Spielraum";
+    const badge = roomPanel.querySelector(".room-badge");
+    if (badge) badge.textContent = "Online";
+    const explainer = roomPanel.querySelector(".room-explainer");
+    if (explainer) explainer.textContent = "Du bist mit Supabase verbunden. Teile den Raumcode mit deinen Mitspielern.";
+    roomPanel.classList.remove("hidden");
+    roomPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    refreshRoom();
+    stopRefresh();
+    refreshTimer = window.setInterval(refreshRoom, 5000);
+  }
+
+  function renderPlayers(players) {
+    const oldRows = roomPanel.querySelectorAll(".room-player");
+    oldRows.forEach((row) => row.remove());
+
+    const roomActions = roomPanel.querySelector(".room-actions");
+    const list = document.createElement("div");
+    list.id = "room-player-list";
+
+    const heading = document.createElement("p");
+    heading.className = "field-label";
+    heading.textContent = `Mitspieler (${players.length})`;
+    list.appendChild(heading);
+
+    players.forEach((player, index) => {
+      const row = document.createElement("div");
+      row.className = "room-player";
+
+      const avatar = document.createElement("span");
+      avatar.className = "avatar";
+      avatar.textContent = index === 0 ? "👑" : "🙂";
+
+      const details = document.createElement("span");
+      const name = document.createElement("b");
+      name.textContent = player.name || "Spieler";
+      const subtitle = document.createElement("small");
+      subtitle.textContent = index === 0 ? "Gastgeber" : `Spieler ${player.player_order || index + 1}`;
+      details.append(name, subtitle);
+
+      row.append(avatar, details);
+      if (index === 0) {
+        const tag = document.createElement("span");
+        tag.className = "you-tag";
+        tag.textContent = "HOST";
+        row.appendChild(tag);
+      }
+      list.appendChild(row);
+    });
+
+    if (roomActions) {
+      roomPanel.insertBefore(list, roomActions);
+    } else {
+      roomPanel.appendChild(list);
+    }
+  }
+
+  async function refreshRoom() {
+    if (!activeRoomCode) return;
+    try {
+      const room = await rpc("get_game_room", { p_code: activeRoomCode });
+      if (room && Array.isArray(room.players)) {
+        renderPlayers(room.players);
+        $("#room-title").textContent =
+          room.status === "waiting" ? "Warte auf Mitspieler" : "Spielraum";
+      }
+    } catch (error) {
+      console.warn("Raumstatus konnte nicht aktualisiert werden:", error);
+    }
+  }
 
   document.querySelectorAll(".mode-card").forEach((button) => {
     button.addEventListener("click", () => {
@@ -20,36 +152,70 @@
     });
   });
 
-  const playerName = () => nameInput.value.trim().slice(0, 20);
-
-  function showPreviewRoom(code) {
-    const name = playerName();
+  $("#create-room").addEventListener("click", async () => {
+    const name = getPlayerName();
     if (!name) {
       setMessage("Bitte gib zuerst deinen Spielernamen ein.", "error");
       nameInput.focus();
       return;
     }
-    $("#shown-code").textContent = code;
-    $("#shown-player").textContent = name;
-    $("#room-title").textContent = "Dein Raum ist vorbereitet";
-    roomPanel.classList.remove("hidden");
-    roomPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-    setMessage("Das ist aktuell eine Vorschau. Online-Räume und Beitritt werden im nächsten Schritt mit Supabase aktiviert.", "success");
-  }
 
-  $("#create-room").addEventListener("click", () => {
-    const code = Math.random().toString(36).slice(2, 7).toUpperCase();
-    showPreviewRoom(code);
+    const button = $("#create-room");
+    button.disabled = true;
+    button.textContent = "Raum wird erstellt …";
+    setMessage("Verbinde mit Supabase …");
+
+    try {
+      const room = await rpc("create_game_room", { p_name: name });
+      if (!room || !room.room_code) {
+        throw new Error("Supabase hat keinen Raumcode zurückgegeben.");
+      }
+      codeInput.value = room.room_code;
+      showRoomPanel(room.room_code, name, room.status);
+      setMessage(`Dein Online-Raum ${room.room_code} wurde erstellt. Teile den Code mit deinen Mitspielern.`, "success");
+    } catch (error) {
+      console.error(error);
+      setMessage(`Raum konnte nicht erstellt werden: ${error.message}`, "error");
+    } finally {
+      button.disabled = false;
+      button.innerHTML = "<span>＋</span> Neuen Raum erstellen";
+    }
   });
 
-  $("#join-room").addEventListener("click", () => {
-    const code = codeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  $("#join-room").addEventListener("click", async () => {
+    const name = getPlayerName();
+    const code = codeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+
+    if (!name) {
+      setMessage("Bitte gib zuerst deinen Spielernamen ein.", "error");
+      nameInput.focus();
+      return;
+    }
     if (code.length < 4) {
       setMessage("Bitte gib einen gültigen Raumcode mit mindestens 4 Zeichen ein.", "error");
       codeInput.focus();
       return;
     }
-    showPreviewRoom(code);
+
+    const button = $("#join-room");
+    button.disabled = true;
+    button.textContent = "…";
+    setMessage("Raum wird gesucht …");
+
+    try {
+      const room = await rpc("join_game_room", { p_code: code, p_name: name });
+      if (!room || !room.room_code) {
+        throw new Error("Supabase hat keine Raumdaten zurückgegeben.");
+      }
+      showRoomPanel(room.room_code, name, room.status);
+      setMessage(`Du bist Raum ${room.room_code} beigetreten.`, "success");
+    } catch (error) {
+      console.error(error);
+      setMessage(`Beitritt nicht möglich: ${error.message}`, "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = "Beitreten";
+    }
   });
 
   codeInput.addEventListener("input", () => {
@@ -67,14 +233,16 @@
   });
 
   $("#back-home").addEventListener("click", () => {
+    stopRefresh();
+    activeRoomCode = null;
     roomPanel.classList.add("hidden");
+    const list = $("#room-player-list");
+    if (list) list.remove();
     setMessage("Wähle einen Modus und gib deinen Namen ein.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  // Zählt einen echten Seitenaufruf über die Edge Function.
-  // Der geheime Supabase-Schlüssel wird dafür nicht im Browser benötigt.
-  const config = window.GAME_CONFIG || {};
+  // Zählt einen Seitenaufruf. Der geheime Schlüssel wird nie im Browser verwendet.
   if (config.TRACKING_FUNCTION_URL) {
     fetch(config.TRACKING_FUNCTION_URL, { method: "POST", mode: "cors" })
       .then((response) => {
@@ -83,9 +251,6 @@
       .catch((error) => console.warn("Aufruf konnte nicht gezählt werden:", error));
   }
 
-  // Online-Verbindung wird bewusst erst nach Eintragen des öffentlichen Keys aktiviert.
-  if (!config.SUPABASE_PUBLISHABLE_KEY ||
-      config.SUPABASE_PUBLISHABLE_KEY.includes("HIER_DEINEN")) {
-    console.info("Supabase-Frontend-Key fehlt noch. Die Raumoberfläche läuft vorerst im Vorschau-Modus.");
-  }
+  // Auswahl des Spielmodus ist bereits vorbereitet; die Spielrunden selbst folgen später.
+  console.info(`Ich seh's! bereit. Gewählter Modus: ${selectedMode}`);
 })();
