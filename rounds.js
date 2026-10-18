@@ -7,6 +7,7 @@
   let lastRoomCode = "";
   let lastPlayerName = "";
   let isHost = false;
+  let lastIsHost = null;
   let refreshTimer = null;
   let cleanQueued = false;
 
@@ -152,9 +153,14 @@
     lastRoomCode = code;
     lastPlayerName = player;
     isHost = Boolean(hostRow);
+    const hostChanged = lastIsHost !== isHost;
+    lastIsHost = isHost;
     addRoundPanel();
     cleanDuplicateLists();
-    if (changed) refreshRound();
+
+    // Auch nachladen, wenn die Spielerliste erst nach dem ersten Raum-Check erscheint.
+    // Sonst kann das Formular für den Gastgeber dauerhaft ausgeblendet bleiben.
+    if (changed || hostChanged) refreshRound();
     if (!refreshTimer) refreshTimer = window.setInterval(refreshRound, 5000);
   }
 
