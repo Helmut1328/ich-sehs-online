@@ -1,0 +1,41 @@
+APP.JS-ÄNDERUNG – Schritt 1
+
+1) Direkt nach den Variablen selectedMode, activeRoomCode und refreshTimer ergänzen:
+
+const CLIENT_TOKEN_KEY = "ich-sehs-client-token-v1";
+function getClientToken() {
+  let token = "";
+  try {
+    token = window.localStorage.getItem(CLIENT_TOKEN_KEY) || "";
+    if (!/^[a-f0-9-]{36}$/i.test(token)) {
+      token = (window.crypto && typeof window.crypto.randomUUID === "function")
+        ? window.crypto.randomUUID()
+        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+      window.localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    }
+  } catch (_) {
+    throw new Error("Der Browser kann die anonyme Spielerkennung nicht speichern. Bitte normalen Browsermodus verwenden.");
+  }
+  return token;
+}
+
+2) Ersetze:
+const room = await rpc("join_game_room", { p_code: code, p_name: name });
+
+durch:
+const room = await rpc("join_game_room", {
+  p_code: code, p_name: name, p_client_token: getClientToken()
+});
+
+3) Ersetze die Beitritts-Erfolgsmeldung durch:
+setMessage(
+  room.already_joined
+    ? `Du bist bereits in Raum ${room.room_code}. Es wurde kein weiterer Spielereintrag angelegt.`
+    : `Du bist Raum ${room.room_code} beigetreten.`,
+  "success"
+);
+
+Wichtig: SQL zuerst ausführen, danach app.js anpassen.

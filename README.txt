@@ -1,17 +1,17 @@
-Ich seh's! – geprüftes Updatepaket
+ICH SEH'S! – SCHRITT 1: DOPPELTE SPIELEREINTRÄGE
 
 Enthalten:
-- supabase_migration.sql: Spielrunden-Funktionen, Gesamt-Öffnungszähler und korrigierte Berechtigungsprüfung beim Bewerten von Antworten
-- rounds.js: Runde starten, Antworten senden, Antworten als richtig markieren, Runde beenden, Öffnungszähler anzeigen und doppelte Spielerliste bereinigen
-- index.html: bindet rounds.js ein
+- 01_join_game_room.sql: Ergänzt einen anonymen Browser-Schlüssel und macht den Beitritt wiederholbar.
+- APP_JS_Aenderung.txt: Drei gezielte Ergänzungen für app.js.
+- README.txt: Reihenfolge und Test.
 
-Wichtig:
-1. Die Migration wurde bereits einmal ausgeführt. Führe diese aktualisierte SQL-Datei erneut vollständig aus, damit die Bewertungsfunktion auf die korrigierte Signatur umgestellt wird.
-2. Danach rounds.js im GitHub-Repository als Datei hinzufügen bzw. ersetzen.
-3. index.html im Repository durch die enthaltene Datei ersetzen.
-4. app.js, config.js und styles.css unverändert lassen.
-5. Nach dem Deployment den Ablauf mit zwei Spielern testen.
+Ablauf:
+1. Im richtigen Supabase-Projekt den SQL Editor öffnen.
+2. 01_join_game_room.sql vollständig einfügen und ausführen.
+3. Nur bei Erfolg die drei Änderungen aus APP_JS_Aenderung.txt in app.js vornehmen.
+4. Im Browser testen: Beitritt wiederholen; die Spielerzahl darf nicht steigen.
+5. Erst nach erfolgreichem Test veröffentlichen.
 
-Der Öffnungszähler summiert die vorhandenen Werte aus public.game_daily_stats. Der vorhandene Edge-Function-Aufruf track-game-view bleibt in app.js erhalten und zählt weiterhin die Seitenaufrufe.
-
-Hinweis: Da Spieler ohne Registrierung über Namen beitreten, ist das eine einfache spielinterne Gastgeberprüfung und keine starke Identitätsauthentifizierung.
+Die Lösung lässt verschiedene Geräte weiterhin getrennte anonyme Kennungen verwenden, auch wenn zwei Personen denselben Namen wählen.
+Wenn das SQL wegen abweichender Spaltennamen fehlschlägt: nichts weiter ändern, Fehlermeldung schicken.
+Dieser Schritt behebt nur doppelte Einträge. Bewertung/Punkte/Reaktionen kommen danach.
