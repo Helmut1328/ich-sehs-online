@@ -9,6 +9,31 @@
   let activeRoomCode = null;
   let refreshTimer = null;
 
+  // Anonyme, dauerhafte Kennung dieses Browsers für wiederholten Beitritt.
+  const CLIENT_TOKEN_KEY = "ich-sehs-client-token-v1";
+
+  function getClientToken() {
+    let token = "";
+
+    try {
+      token = window.localStorage.getItem(CLIENT_TOKEN_KEY) || "";
+
+      if (!/^[a-f0-9-]{36}$/i.test(token)) {
+        if (!window.crypto || typeof window.crypto.randomUUID !== "function") {
+          throw new Error("Dieser Browser unterstützt keine sichere Kennungserstellung.");
+        }
+        token = window.crypto.randomUUID();
+        window.localStorage.setItem(CLIENT_TOKEN_KEY, token);
+      }
+    } catch (error) {
+      throw new Error(
+        "Die anonyme Spielerkennung konnte nicht gespeichert werden. Bitte normalen Browsermodus verwenden."
+      );
+    }
+
+    return token;
+  }
+
   const config = window.GAME_CONFIG || {};
   const supabaseUrl = (config.SUPABASE_URL || "").replace(/\/+$/, "");
   const publicKey = config.SUPABASE_PUBLISHABLE_KEY || "";
@@ -85,13 +110,8 @@
   }
 
   function renderPlayers(players) {
-    // Wichtig: Die vorherige Liste vollständig entfernen, nicht nur ihre Spielerzeilen.
-    // Sonst bleibt bei jedem 5-Sekunden-Refresh eine weitere Überschrift stehen.
-    // Es können bereits mehrere Elemente mit derselben ID vorhanden sein.
-    // Deshalb ALLE alten Listen entfernen, nicht nur die erste gefundene.
+    // Alte Liste vollständig entfernen, damit Refreshes keine doppelten Überschriften erzeugen.
     roomPanel.querySelectorAll("#room-player-list").forEach((list) => list.remove());
-
-    // Entfernt gegebenenfalls die statische Beispielzeile aus dem HTML.
     roomPanel.querySelectorAll(".room-player").forEach((row) => row.remove());
 
     const roomActions = roomPanel.querySelector(".room-actions");
@@ -209,12 +229,23 @@
     setMessage("Raum wird gesucht …");
 
     try {
-      const room = await rpc("join_game_room", { p_code: code, p_name: name });
+      const room = await rpc("join_game_room", {
+        p_code: code,
+        p_name: name,
+        p_client_token: getClientToken()
+      });
+
       if (!room || !room.room_code) {
         throw new Error("Supabase hat keine Raumdaten zurückgegeben.");
       }
-      showRoomPanel(room.room_code, name, room.status);
-      setMessage(`Du bist Raum ${room.room_code} beigetreten.`, "success");
+
+      showRoomPanel(room.room_code, room.player_name || name, room.status);
+      setMessage(
+        room.already_joined
+          ? `Du bist bereits in Raum ${room.room_code}. Es wurde kein weiterer Spielereintrag angelegt.`
+          : `Du bist Raum ${room.room_code} beigetreten.`,
+        "success"
+      );
     } catch (error) {
       console.error(error);
       setMessage(`Beitritt nicht möglich: ${error.message}`, "error");

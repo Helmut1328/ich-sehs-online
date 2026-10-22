@@ -1,0 +1,13 @@
+Diese Datei ersetzt die bisherige app.js vollständig.
+
+Voraussetzung:
+Die Supabase-Funktion public.join_game_room(p_code text, p_name text, p_client_token text) muss erfolgreich angelegt sein.
+
+Einbau:
+1. GitHub-Repository öffnen.
+2. app.js öffnen und Bearbeiten auswählen.
+3. Gesamten bisherigen Inhalt durch diese Datei ersetzen.
+4. Commit speichern und GitHub Pages abwarten.
+5. Spielseite mit Strg+F5 neu laden und testen.
+
+Wenn der SQL-Schritt nicht erfolgreich war, diese Datei noch nicht veröffentlichen.
