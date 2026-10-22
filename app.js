@@ -14,10 +14,8 @@
 
   function getClientToken() {
     let token = "";
-
     try {
       token = window.localStorage.getItem(CLIENT_TOKEN_KEY) || "";
-
       if (!/^[a-f0-9-]{36}$/i.test(token)) {
         if (!window.crypto || typeof window.crypto.randomUUID !== "function") {
           throw new Error("Dieser Browser unterstützt keine sichere Kennungserstellung.");
@@ -26,11 +24,8 @@
         window.localStorage.setItem(CLIENT_TOKEN_KEY, token);
       }
     } catch (error) {
-      throw new Error(
-        "Die anonyme Spielerkennung konnte nicht gespeichert werden. Bitte normalen Browsermodus verwenden."
-      );
+      throw new Error("Die anonyme Spielerkennung konnte nicht gespeichert werden. Bitte normalen Browsermodus verwenden.");
     }
-
     return token;
   }
 
@@ -55,28 +50,18 @@
 
   async function rpc(functionName, parameters) {
     checkConfig();
-
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/${functionName}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": publicKey,
-          "Authorization": `Bearer ${publicKey}`
-        },
-        body: JSON.stringify(parameters)
-      }
-    );
-
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${functionName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: publicKey,
+        Authorization: `Bearer ${publicKey}`
+      },
+      body: JSON.stringify(parameters)
+    });
     const raw = await response.text();
     let data = null;
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch {
-      data = raw;
-    }
-
+    try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
     if (!response.ok) {
       const detail = data && typeof data === "object"
         ? (data.message || data.details || data.hint || JSON.stringify(data))
@@ -126,19 +111,33 @@
     players.forEach((player, index) => {
       const row = document.createElement("div");
       row.className = "room-player";
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.gap = "10px";
 
       const avatar = document.createElement("span");
       avatar.className = "avatar";
       avatar.textContent = index === 0 ? "👑" : "🙂";
 
       const details = document.createElement("span");
+      details.style.flex = "1";
+
       const name = document.createElement("b");
       name.textContent = player.name || "Spieler";
+
       const subtitle = document.createElement("small");
       subtitle.textContent = index === 0 ? "Gastgeber" : `Spieler ${player.player_order || index + 1}`;
       details.append(name, subtitle);
 
-      row.append(avatar, details);
+      const score = document.createElement("span");
+      score.className = "player-score";
+      score.style.fontWeight = "800";
+      score.style.whiteSpace = "nowrap";
+      const points = Number(player.score || 0);
+      score.textContent = `⭐ ${points} ${points === 1 ? "Punkt" : "Punkte"}`;
+
+      row.append(avatar, details, score);
+
       if (index === 0) {
         const tag = document.createElement("span");
         tag.className = "you-tag";
@@ -148,11 +147,8 @@
       list.appendChild(row);
     });
 
-    if (roomActions) {
-      roomPanel.insertBefore(list, roomActions);
-    } else {
-      roomPanel.appendChild(list);
-    }
+    if (roomActions) roomPanel.insertBefore(list, roomActions);
+    else roomPanel.appendChild(list);
   }
 
   async function refreshRoom() {
@@ -161,8 +157,7 @@
       const room = await rpc("get_game_room", { p_code: activeRoomCode });
       if (room && Array.isArray(room.players)) {
         renderPlayers(room.players);
-        $("#room-title").textContent =
-          room.status === "waiting" ? "Warte auf Mitspieler" : "Spielraum";
+        $("#room-title").textContent = room.status === "waiting" ? "Warte auf Mitspieler" : "Spielraum";
       }
     } catch (error) {
       console.warn("Raumstatus konnte nicht aktualisiert werden:", error);
@@ -185,17 +180,13 @@
       nameInput.focus();
       return;
     }
-
     const button = $("#create-room");
     button.disabled = true;
     button.textContent = "Raum wird erstellt …";
     setMessage("Verbinde mit Supabase …");
-
     try {
       const room = await rpc("create_game_room", { p_name: name });
-      if (!room || !room.room_code) {
-        throw new Error("Supabase hat keinen Raumcode zurückgegeben.");
-      }
+      if (!room || !room.room_code) throw new Error("Supabase hat keinen Raumcode zurückgegeben.");
       codeInput.value = room.room_code;
       showRoomPanel(room.room_code, name, room.status);
       setMessage(`Dein Online-Raum ${room.room_code} wurde erstellt. Teile den Code mit deinen Mitspielern.`, "success");
@@ -211,7 +202,6 @@
   $("#join-room").addEventListener("click", async () => {
     const name = getPlayerName();
     const code = codeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
-
     if (!name) {
       setMessage("Bitte gib zuerst deinen Spielernamen ein.", "error");
       nameInput.focus();
@@ -227,18 +217,13 @@
     button.disabled = true;
     button.textContent = "…";
     setMessage("Raum wird gesucht …");
-
     try {
       const room = await rpc("join_game_room", {
         p_code: code,
         p_name: name,
         p_client_token: getClientToken()
       });
-
-      if (!room || !room.room_code) {
-        throw new Error("Supabase hat keine Raumdaten zurückgegeben.");
-      }
-
+      if (!room || !room.room_code) throw new Error("Supabase hat keine Raumdaten zurückgegeben.");
       showRoomPanel(room.room_code, room.player_name || name, room.status);
       setMessage(
         room.already_joined
