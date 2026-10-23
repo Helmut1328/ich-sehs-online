@@ -6,6 +6,7 @@
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   let roomCode = "", playerName = "", isHost = false, refreshTimer = null, refreshing = false;
   let targetCircle = null, targetDrawing = false, targetStart = null, targetResize = false, pointSubmitted = false;
+  let clearedFinishedRoundKey = "";
 
   async function rpc(name, args) {
     if (!baseUrl || !key) throw new Error("Supabase-Konfiguration fehlt.");
@@ -168,9 +169,11 @@
     const canvas=$("#rounds-target-canvas"), img=$("#rounds-target-image");
     if(!canvas||!img||img.hidden||!img.clientWidth) return;
     resizeCanvas(canvas,img);
-    const ctx=canvas.getContext("2d"), w=img.clientWidth, h=img.clientHeight;
+    const rect=canvas.getBoundingClientRect();
+    const ctx=canvas.getContext("2d"), w=rect.width, h=rect.height;
     ctx.clearRect(0,0,w,h);
     if(!targetCircle) return;
+    // Zielkoordinaten sind immer relativ zur sichtbaren Bildfläche (0 bis 1).
     const x=targetCircle.x*w,y=targetCircle.y*h,r=targetCircle.r*Math.min(w,h);
     ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle="rgba(40,180,90,.18)";ctx.fill();
     ctx.lineWidth=3;ctx.strokeStyle="#19a05a";ctx.stroke();
@@ -229,7 +232,8 @@
     const canvas=$("#rounds-point-canvas"),img=$("#rounds-point-image");
     if(!canvas||!img||img.hidden||!img.clientWidth)return;
     resizeCanvas(canvas,img);
-    const ctx=canvas.getContext("2d"),w=img.clientWidth,h=img.clientHeight;
+    const rect=canvas.getBoundingClientRect();
+    const ctx=canvas.getContext("2d"),w=rect.width,h=rect.height;
     ctx.clearRect(0,0,w,h);
     const reveal=Boolean(round.answers_revealed)||round.status==="finished";
     if(reveal && round.target_x!=null && round.target_y!=null && round.target_radius!=null){
@@ -314,12 +318,33 @@
     const allAnswered=Boolean(round.all_players_answered)||revealed;
     const pointMode=round.mode==="point";
     const canSeeAnswers=revealed||Boolean(round.is_host);
+    const finishedRoundKey=String(round.id||round.created_at||`${round.room_code||roomCode}:${round.host_name||""}:${round.finished_at||"finished"}`);
+    // Der nächste Rundenchef sieht nicht länger das Bild der alten Runde.
+    // Die Vorbereitung wird genau einmal zurückgesetzt, nicht bei jedem Poll.
+    if(status==="finished" && isNextHost && clearedFinishedRoundKey!==finishedRoundKey){
+      clearedFinishedRoundKey=finishedRoundKey;
+      const file=$("#rounds-image-file"), preview=$("#rounds-upload-preview");
+      if(file) file.value="";
+      if(preview){preview.removeAttribute("src");preview.hidden=true;}
+      $("#rounds-image-url").value="";
+      $("#rounds-clue").value="";
+      $("#rounds-solution").value="";
+      targetCircle=null;
+      const targetImg=$("#rounds-target-image");
+      if(targetImg){targetImg.removeAttribute("src");targetImg.hidden=true;}
+      const targetCanvas=$("#rounds-target-canvas");
+      if(targetCanvas){targetCanvas.width=1;targetCanvas.height=1;targetCanvas.style.width="1px";targetCanvas.style.height="1px";}
+      $("#rounds-target-status").textContent="Wähle ein neues Bild und markiere den Zielkreis.";
+      $("#rounds-upload-message").textContent="Wähle ein Bild für die neue Runde aus.";
+      $("#rounds-mode-select").value="see";
+      updateModeSetup();
+    }
     $("#rounds-title").textContent=status==="finished"?"Runde beendet":(revealed?"Antworten aufgedeckt":"Runde läuft");
     const canPrepare = status === "active"
       ? false
       : (status === "finished" ? Boolean(isNextHost) : Boolean(isHost));
     $("#rounds-setup").hidden = !canPrepare;
-    $("#rounds-play").hidden=status!=="active"&&status!=="finished";
+    $("#rounds-play").hidden=(status!=="active"&&status!=="finished") || (status==="finished"&&Boolean(isNextHost));
     $("#rounds-clue-display").textContent=round.clue||"";
     const image=$("#rounds-image");
     // Im Punktmodus wird nur das interaktive Bild gerendert, nicht zusätzlich das normale Bild.
@@ -408,6 +433,7 @@
         p_target_radius:mode==="point"?targetCircle.r:null,
         p_target_aspect:mode==="point"?($("#rounds-target-image").naturalWidth/$("#rounds-target-image").naturalHeight):null
       });
+      clearedFinishedRoundKey="";
       message("Die Runde läuft. Die Mitspieler können jetzt spielen.");await refreshRound();
     }catch(e){message("Runde konnte nicht gestartet werden: "+e.message,true);}
     finally{button.disabled=false;}
