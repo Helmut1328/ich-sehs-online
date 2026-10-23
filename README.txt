@@ -1,9 +1,9 @@
-Ich seh's! – fertige Dateien für den Rundenablauf
+Ich seh's! – Erweiterungspaket v2
 
 Enthalten:
-- rounds.js: Frontend mit Live-Antworten nur für den Rundenleiter vor der Aufdeckung, Emoji-Reaktionen nach der Aufdeckung, Bewertung erst wenn alle geantwortet haben, Punkte nur einmal pro Antwort und Anzeige des nächsten Rundenleiters.
-- migration.sql: Supabase-Funktionen für Antwortfreigabe, Bewertung und Rundenleiter-Wechsel.
-- INSTALLATION.txt: Einbauanleitung.
+- rounds.js: Auswahl vor Spielstart zwischen „Antwort erraten“ und „Finde den Punkt“ sowie Einstellung, ob der Rundenchef rotiert.
+- migration_v2.sql: Supabase-Felder und RPCs für die Rundenchef-Einstellung und die automatische Kreis-Auswertung.
+- INSTALLATION.txt: Installations- und Testanleitung.
 
-WICHTIG:
-Diese Dateien wurden aus dem bekannten aktuellen Repository-Stand abgeleitet, aber NICHT gegen dein Live-Supabase ausgeführt oder im Browser mit mehreren Geräten getestet. Daher vor dem Live-Einsatz erst in Supabase ausführen und dann mit zwei bis drei Testspielern prüfen. Die ZIP ist ein vollständiger Satz für den beschriebenen Rundenablauf, aber kein Nachweis eines erfolgreichen Live-Tests. Entfernen von Spielern ist nicht Bestandteil dieses Pakets.
+Wichtiger Hinweis:
+Die Dateien wurden auf Basis des aktuellen Projektstands erstellt. Die SQL-Migration wurde nicht gegen das Live-Supabase ausgeführt und das Frontend nicht in einem echten Mehrgeräte-Spiel getestet. Vor Veröffentlichung zuerst Sicherung erstellen, Migration ausführen und Test mit mehreren Geräten machen.
