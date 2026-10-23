@@ -52,9 +52,9 @@
     .rounds-mode-options input{margin-top:2px}
     .rounds-check{display:flex;align-items:flex-start;gap:9px;margin:12px 0;font-size:13px;line-height:1.4}
     .rounds-target-editor{margin-top:12px;padding:16px;border:1px solid #e5dfff;border-radius:16px;background:#f7f5ff}
-    .rounds-image-wrap{position:relative;display:inline-block;max-width:100%;line-height:0;vertical-align:top}
-    .rounds-image-wrap img{display:block;max-width:100%;max-height:360px;width:auto;height:auto;object-fit:contain;border-radius:10px}
-    .rounds-image-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
+    .rounds-image-wrap{position:relative;display:block;width:max-content;max-width:100%;line-height:0;vertical-align:top;margin:12px auto}
+    .rounds-image-wrap img{display:block;width:auto;height:auto;max-width:100%;max-height:520px;object-fit:contain;border-radius:10px}
+    .rounds-image-wrap canvas{position:absolute;left:0;top:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair;padding:0;margin:0;border:0}
     .rounds-image-wrap.point-player canvas{touch-action:none}
     .rounds-top{padding-bottom:18px;border-bottom:1px solid #eeeaff;margin-bottom:18px}.rounds-top .eyebrow{background:#f0ebff;border-radius:999px;padding:7px 10px;display:inline-block}.rounds-hint{font-size:13px;line-height:1.55;color:#777493}.rounds-status{background:#e5fbef;color:#168352}.rounds-image{max-height:520px;border-radius:16px;box-shadow:0 8px 24px #2d225010}.rounds-clue{background:#f4f0ff;padding:17px;border:1px solid #e6ddff;border-radius:15px}.rounds-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px #6948f52c}
     @media(max-width:760px){#rounds-panel{padding:16px}.rounds-panel h3{font-size:21px}.rounds-answer{flex-direction:column}.rounds-answer .rounds-btn{width:100%}.rounds-mode-options{grid-template-columns:1fr}}
@@ -159,9 +159,12 @@
   function resizeCanvas(canvas, img) {
     if (!canvas || !img || !img.naturalWidth || !img.clientWidth) return;
     const rect = img.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    // Canvas muss pixelgenau über der tatsächlich sichtbaren Bildfläche liegen.
+    const wrap = canvas.parentElement;
+    if (wrap) { wrap.style.width = `${rect.width}px`; wrap.style.height = `${rect.height}px`; }
     canvas.width = Math.max(1, Math.round(rect.width*dpr));
     canvas.height = Math.max(1, Math.round(rect.height*dpr));
+    canvas.style.left = "0px"; canvas.style.top = "0px";
     canvas.style.width = `${rect.width}px`; canvas.style.height = `${rect.height}px`;
     const ctx = canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
   }
@@ -184,7 +187,7 @@
     const canvas=$("#rounds-target-canvas"), img=$("#rounds-target-image");
     if(!img||img.hidden||!img.clientWidth) return;
     e.preventDefault(); canvas.setPointerCapture?.(e.pointerId);
-    const b=canvas.getBoundingClientRect(), x=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)), y=Math.max(0,Math.min(1,(e.clientY-b.top)/b.height));
+    const b=img.getBoundingClientRect(), x=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)), y=Math.max(0,Math.min(1,(e.clientY-b.top)/b.height));
     const w=b.width,h=b.height;
     let moveCircle = false;
     if(targetCircle){
@@ -200,7 +203,7 @@
   }
   function targetPointerMove(e) {
     if(!targetDrawing||!targetStart) return;
-    const b=$("#rounds-target-canvas").getBoundingClientRect(), px=e.clientX-b.left,py=e.clientY-b.top;
+    const b=$("#rounds-target-image").getBoundingClientRect(), px=e.clientX-b.left,py=e.clientY-b.top;
     if(targetResize&&targetCircle){
       targetCircle.r=Math.max(.015,Math.min(.5,Math.hypot(px-targetCircle.x*b.width,py-targetCircle.y*b.height)/Math.min(b.width,b.height)));
     } else if(targetStart.moveCircle&&targetStart.original){
@@ -220,7 +223,7 @@
     if (currentRoundHost) return;
     const roundMode = $("#rounds-point-play") && !$("#rounds-point-play").hidden;
     if(!roundMode) return;
-    const canvas=$("#rounds-point-canvas"),b=canvas.getBoundingClientRect();
+    const canvas=$("#rounds-point-canvas"), img=$("#rounds-point-image"), b=img.getBoundingClientRect();
     const x=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)),y=Math.max(0,Math.min(1,(e.clientY-b.top)/b.height));
     try {
       await rpc("submit_game_point",{p_code:roomCode,p_player_name:playerName,p_x:x,p_y:y});
@@ -309,7 +312,12 @@
   }
   function renderRound(round) {
     if (Array.isArray(round)) round = round[0] || null;
-    if (!round) { $("#rounds-title").textContent="Noch keine Runde gestartet"; $("#rounds-play").hidden=true; $("#rounds-setup").hidden=!isHost; return; }
+    if (!round) {
+      $("#rounds-title").textContent="Noch keine Runde gestartet"; $("#rounds-play").hidden=true; $("#rounds-setup").hidden=!isHost;
+      const staleImage=$("#rounds-image"); if(staleImage){staleImage.removeAttribute("src");staleImage.hidden=true;}
+      const pointImage=$("#rounds-point-image"); if(pointImage){pointImage.removeAttribute("src");pointImage.hidden=true;}
+      return;
+    }
     const status=round.status||"active";
     const nextHost=String(round.next_host_name||"").trim().toLocaleLowerCase();
     const isNextHost=status==="finished"&&nextHost&&nextHost===playerName.trim().toLocaleLowerCase();
@@ -331,7 +339,9 @@
       $("#rounds-solution").value="";
       targetCircle=null;
       const targetImg=$("#rounds-target-image");
-      if(targetImg){targetImg.removeAttribute("src");targetImg.hidden=true;}
+      if(targetImg){targetImg.onload=null;targetImg.removeAttribute("src");targetImg.hidden=true;}
+      const oldPointImage=$("#rounds-point-image"); if(oldPointImage){oldPointImage.onload=null;oldPointImage.removeAttribute("src");oldPointImage.hidden=true;}
+      const oldRoundImage=$("#rounds-image"); if(oldRoundImage){oldRoundImage.onerror=null;oldRoundImage.removeAttribute("src");oldRoundImage.hidden=true;}
       const targetCanvas=$("#rounds-target-canvas");
       if(targetCanvas){targetCanvas.width=1;targetCanvas.height=1;targetCanvas.style.width="1px";targetCanvas.style.height="1px";}
       $("#rounds-target-status").textContent="Wähle ein neues Bild und markiere den Zielkreis.";
