@@ -10,7 +10,7 @@
     if (!baseUrl || !key) throw new Error("Supabase-Konfiguration fehlt.");
     const res = await fetch(`${baseUrl}/rest/v1/rpc/${name}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      headers: {"Content-Type":"application/json", apikey:key, Authorization:`Bearer ${key}`},
       body: JSON.stringify(args)
     });
     const raw = await res.text();
@@ -32,7 +32,7 @@
     .rounds-btn.secondary{background:#eeeaff;color:#5033d1}
     .rounds-btn:disabled{opacity:.5}
     .rounds-clue{background:#f7f5ff;padding:14px;border-radius:12px;font-weight:700;line-height:1.5}
-    .rounds-answer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e9e5f6}
+    .rounds-answer{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #e9e5f6}
     .rounds-answer b,.rounds-answer small{display:block}.rounds-answer small{color:#79758d;margin-top:4px}
     .rounds-image{display:block;max-width:100%;max-height:360px;object-fit:contain;border-radius:12px;margin:14px auto}
     .rounds-status{font-size:11px;font-weight:800;border-radius:999px;padding:7px 10px;background:#e2f9ec;color:#168352}
@@ -45,7 +45,7 @@
     .rounds-file-row input[type=file]{max-width:100%;font-size:12px}
     .rounds-preview{display:block;max-width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin:10px 0}
     #open-counter-widget{font-size:11px;color:#9893a9;font-variant-numeric:tabular-nums}
-    @media(max-width:650px){.rounds-answer{align-items:flex-start;flex-direction:column}.rounds-answer .rounds-btn{width:100%}}
+    @media(max-width:650px){.rounds-answer{flex-direction:column}.rounds-answer .rounds-btn{width:100%}}
   `;
   document.head.appendChild(style);
 
@@ -75,14 +75,14 @@
     section.innerHTML = `
       <div class="rounds-top"><div><p class="eyebrow">SPIELRUNDE</p><h3 id="rounds-title">Noch keine Runde gestartet</h3></div><span class="rounds-status">Online</span></div>
       <div id="rounds-setup">
-        <p class="rounds-hint">Der Gastgeber gibt einen Hinweis und die richtige Lösung vor. Du kannst ein Bild direkt vom Handy oder Computer auswählen.</p>
+        <p class="rounds-hint">Der Rundenleiter gibt einen Hinweis und die richtige Lösung vor. Das Bild kann direkt vom Handy oder Computer ausgewählt werden.</p>
         <label class="rounds-field" for="rounds-image-file">Bild aus Galerie / Dateien auswählen (optional)</label>
         <div class="rounds-file-row"><input id="rounds-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif"><button id="rounds-upload" class="rounds-btn secondary" type="button">Bild hochladen</button></div>
         <p id="rounds-upload-message" class="rounds-hint" role="status">Maximal 8 MB. Das Bild wird mit der Spielrunde geteilt.</p>
         <img id="rounds-upload-preview" class="rounds-preview" alt="Vorschau des ausgewählten Bildes" hidden>
         <label class="rounds-field" for="rounds-image-url">Oder Bild-URL verwenden (optional)</label><input id="rounds-image-url" class="rounds-input" type="url" placeholder="https://…">
         <label class="rounds-field" for="rounds-clue">Hinweis für die Mitspieler</label><input id="rounds-clue" class="rounds-input" maxlength="180" placeholder="z. B. Es ist rund und kann rollen">
-        <label class="rounds-field" for="rounds-solution">Richtige Lösung (bleibt für Mitspieler geheim)</label><input id="rounds-solution" class="rounds-input" maxlength="100" placeholder="Nur der Gastgeber sieht die Lösung">
+        <label class="rounds-field" for="rounds-solution">Richtige Lösung (bleibt für Mitspieler geheim)</label><input id="rounds-solution" class="rounds-input" maxlength="100" placeholder="Nur der Rundenleiter sieht die Lösung">
         <button id="rounds-start" class="rounds-btn" type="button">Runde starten</button>
       </div>
       <div id="rounds-play" hidden>
@@ -119,43 +119,34 @@
     if (!/^image\/(jpeg|png|webp|gif|avif)$/.test(file.type)) return uploadMessage("Bitte JPG, PNG, WEBP, GIF oder AVIF verwenden.", true);
     const button = $("#rounds-upload"); button.disabled = true; button.textContent = "Wird hochgeladen …";
     try {
-      const body = new FormData();
-      body.append("image", file); body.append("code", roomCode); body.append("player_name", playerName);
-      const response = await fetch(`${baseUrl}/functions/v1/upload-round-image`, {
-        method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}` }, body
-      });
+      const body = new FormData(); body.append("image", file); body.append("code", roomCode); body.append("player_name", playerName);
+      const response = await fetch(`${baseUrl}/functions/v1/upload-round-image`, {method:"POST",headers:{apikey:key,Authorization:`Bearer ${key}`},body});
       const raw = await response.text(); let data = {};
-      try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { error: raw }; }
+      try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = {error:raw}; }
       if (!response.ok) throw new Error(data.error || data.message || `Upload fehlgeschlagen (HTTP ${response.status})`);
-      $("#rounds-image-url").value = data.url;
-      uploadMessage("Bild erfolgreich hochgeladen. Es wird mit der Runde geteilt.");
+      $("#rounds-image-url").value = data.url; uploadMessage("Bild erfolgreich hochgeladen. Es wird mit der Runde geteilt.");
       message("Bild bereit. Fülle Hinweis und Lösung aus und starte die Runde.");
-    } catch (e) {
-      uploadMessage(`Bild-Upload nicht möglich: ${e.message}`, true);
-    } finally { button.disabled = false; button.textContent = "Bild hochladen"; }
+    } catch (e) { uploadMessage(`Bild-Upload nicht möglich: ${e.message}`, true); }
+    finally { button.disabled = false; button.textContent = "Bild hochladen"; }
   }
   async function inspectRoom() {
     const panel = $("#room-panel");
     if (!panel || panel.classList.contains("hidden")) {
       if (refreshTimer) clearInterval(refreshTimer); refreshTimer = null; roomCode = ""; playerName = ""; isHost = false; return;
     }
-    const code = ($("#shown-code")?.textContent || "").trim();
-    const name = ($("#player-name")?.value || "").trim();
+    const code = ($("#shown-code")?.textContent || "").trim(), name = ($("#player-name")?.value || "").trim();
     if (!code || code === "———" || !name) return;
     const changed = code !== roomCode || name !== playerName;
     roomCode = code; playerName = name; isHost = detectHost(panel, name);
     addRoundPanel();
-    if (isHost && $("#rounds-title")?.textContent === "Noch keine Runde gestartet" && $("#rounds-setup")) $("#rounds-setup").hidden = false;
     if (changed) refreshRound();
     if (!refreshTimer) refreshTimer = window.setInterval(refreshRound, 5000);
   }
   async function refreshRound() {
     if (!roomCode || !playerName || !$("#rounds-panel") || refreshing) return;
     refreshing = true;
-    try {
-      const round = await rpc("get_game_round", { p_code: roomCode, p_player_name: playerName });
-      renderRound(round);
-    } catch (e) {
+    try { renderRound(await rpc("get_game_round", {p_code:roomCode,p_player_name:playerName})); }
+    catch (e) {
       const msg = String(e.message || "").toLowerCase();
       if (msg.includes("keine runde") || msg.includes("not found") || msg.includes("no rows")) {
         $("#rounds-title").textContent = "Noch keine Runde gestartet"; $("#rounds-play").hidden = true; $("#rounds-setup").hidden = !isHost;
@@ -166,8 +157,12 @@
     if (Array.isArray(round)) round = round[0] || null;
     if (!round) { $("#rounds-title").textContent = "Noch keine Runde gestartet"; $("#rounds-play").hidden = true; $("#rounds-setup").hidden = !isHost; return; }
     const status = round.status || "active";
+    const nextHost = String(round.next_host_name || "").trim().toLocaleLowerCase();
+    const isNextHost = status === "finished" && nextHost && nextHost === playerName.trim().toLocaleLowerCase();
+    isHost = Boolean(round.is_host) || Boolean(isNextHost);
     const revealed = Boolean(round.answers_revealed) || status === "finished";
     const allAnswered = Boolean(round.all_players_answered) || revealed;
+    const canSeeAnswers = revealed || Boolean(round.is_host);
     $("#rounds-title").textContent = status === "finished" ? "Runde beendet" : (revealed ? "Antworten aufgedeckt" : "Runde läuft");
     $("#rounds-setup").hidden = !isHost || status === "active";
     $("#rounds-play").hidden = status !== "active" && status !== "finished";
@@ -175,79 +170,74 @@
     const image = $("#rounds-image");
     if (round.image_url) { image.src = round.image_url; image.hidden = false; image.onerror = () => { image.hidden = true; }; }
     else { image.removeAttribute("src"); image.hidden = true; }
-    $("#rounds-answer-entry").hidden = isHost || status !== "active" || Boolean(round.my_answer_submitted);
-    $("#rounds-finish").hidden = !isHost || status !== "active";
+    $("#rounds-answer-entry").hidden = Boolean(round.is_host) || status !== "active" || Boolean(round.my_answer_submitted);
+    $("#rounds-finish").hidden = !Boolean(round.is_host) || status !== "active" || !allAnswered;
     const revealStatus = $("#rounds-reveal-status");
-    revealStatus.hidden = revealed;
-    revealStatus.textContent = revealed ? "" : (allAnswered ? "Alle Antworten sind eingegangen. Die Antworten werden aufgedeckt …" : "Die Antworten bleiben geheim, bis alle Mitspieler geantwortet haben.");
+    revealStatus.hidden = canSeeAnswers;
+    revealStatus.textContent = canSeeAnswers ? "" : "Deine Antwort ist abgegeben? Warte, bis alle Mitspieler geantwortet haben. Erst dann werden die Antworten für alle sichtbar.";
     $("#rounds-solution-display").textContent = round.secret_answer ? `Richtige Lösung: ${round.secret_answer}` : (status === "finished" ? "Die Runde ist beendet." : "");
     const list = $("#rounds-answers"); list.replaceChildren();
-    if (!revealed) return;
+    if (!canSeeAnswers) return;
     (round.answers || []).forEach(answer => {
       const row = document.createElement("div"); row.className = "rounds-answer";
       const info = document.createElement("span"), name = document.createElement("b"), value = document.createElement("small");
       name.textContent = answer.player_name;
-      value.textContent = `${answer.answer} · ${answer.is_correct ? "Richtig ✓" : answer.is_correct === false && answer.reviewed ? "Falsch ✕" : "Noch nicht bewertet"}`;
+      value.textContent = `${answer.answer} · ${answer.is_correct ? "Richtig ✓" : answer.reviewed ? "Falsch ✕" : "Noch nicht bewertet"}`;
       info.append(name, value);
       if (Array.isArray(answer.reactions) && answer.reactions.length) {
         const counts = answer.reactions.reduce((acc, item) => { acc[item.emoji] = (acc[item.emoji] || 0) + 1; return acc; }, {});
-        const reactionSummary = document.createElement("small");
-        reactionSummary.textContent = Object.entries(counts).map(([emoji, count]) => `${emoji} ${count}`).join(" · ");
-        info.appendChild(reactionSummary);
+        const summary = document.createElement("small");
+        summary.textContent = Object.entries(counts).map(([emoji,count]) => `${emoji} ${count}`).join(" · "); info.appendChild(summary);
       }
       row.appendChild(info);
-      if (!isHost && status === "active") {
-        const reactions = document.createElement("div"); reactions.className = "rounds-reactions"; reactions.setAttribute("aria-label", `Emoji-Reaktion auf die Antwort von ${answer.player_name}`);
-        ["😂", "👍", "👎", "❤️", "🤔"].forEach(emoji => {
+      if (revealed && !Boolean(round.is_host) && status === "active") {
+        const reactions = document.createElement("div"); reactions.className = "rounds-reactions";
+        reactions.setAttribute("aria-label", `Emoji-Reaktion auf die Antwort von ${answer.player_name}`);
+        ["😂","👍","👎","❤️","🤔"].forEach(emoji => {
           const button = document.createElement("button"); button.type = "button"; button.className = "rounds-reaction"; button.textContent = emoji; button.title = `Mit ${emoji} reagieren`;
           if (answer.my_reaction === emoji) button.classList.add("selected");
           button.addEventListener("click", async () => {
             reactions.querySelectorAll("button").forEach(b => b.disabled = true);
-            try { await rpc("set_game_answer_reaction", { p_code: roomCode, p_player_name: playerName, p_answer_player_name: answer.player_name, p_reaction: emoji }); await refreshRound(); }
-            catch (e) { message(e.message, true); reactions.querySelectorAll("button").forEach(b => b.disabled = false); }
+            try { await rpc("set_game_answer_reaction", {p_code:roomCode,p_player_name:playerName,p_answer_player_name:answer.player_name,p_reaction:emoji}); await refreshRound(); }
+            catch (e) { message(e.message,true); reactions.querySelectorAll("button").forEach(b => b.disabled = false); }
           });
           reactions.appendChild(button);
         });
         row.appendChild(reactions);
       }
-      if (isHost && !answer.is_correct && !answer.reviewed && answer.answer && status === "active") {
+      if (Boolean(round.is_host) && allAnswered && !answer.reviewed && answer.answer && status === "active") {
         const actions = document.createElement("div"); actions.className = "rounds-reactions";
         const correct = document.createElement("button"); correct.className = "rounds-btn secondary"; correct.textContent = "✓ Richtig";
-        correct.addEventListener("click", async () => { try { await rpc("mark_game_answer_correct", { p_code: roomCode, p_host_name: playerName, p_answer_player_name: answer.player_name }); await refreshRound(); } catch (e) { message(e.message, true); } });
+        correct.addEventListener("click", async () => { try { await rpc("mark_game_answer_correct",{p_code:roomCode,p_host_name:playerName,p_answer_player_name:answer.player_name}); await refreshRound(); } catch(e) { message(e.message,true); } });
         const wrong = document.createElement("button"); wrong.className = "rounds-btn secondary"; wrong.textContent = "✕ Falsch";
-        wrong.addEventListener("click", async () => { try { await rpc("mark_game_answer_wrong", { p_code: roomCode, p_host_name: playerName, p_answer_player_name: answer.player_name }); await refreshRound(); } catch (e) { message(e.message, true); } });
-        actions.append(correct, wrong); row.appendChild(actions);
+        wrong.addEventListener("click", async () => { try { await rpc("mark_game_answer_wrong",{p_code:roomCode,p_host_name:playerName,p_answer_player_name:answer.player_name}); await refreshRound(); } catch(e) { message(e.message,true); } });
+        actions.append(correct,wrong); row.appendChild(actions);
       }
       list.appendChild(row);
     });
   }
   async function startRound() {
     const clue = $("#rounds-clue").value.trim(), solution = $("#rounds-solution").value.trim();
-    if (!clue || !solution) return message("Bitte Hinweis und richtige Lösung ausfüllen.", true);
+    if (!clue || !solution) return message("Bitte Hinweis und richtige Lösung ausfüllen.",true);
     const button = $("#rounds-start"); button.disabled = true;
     try {
-      await rpc("start_game_round", {
-        p_code: roomCode, p_player_name: playerName,
-        p_mode: $(".mode-card.selected")?.dataset.mode || "see",
-        p_clue: clue, p_secret_answer: solution,
-        p_image_url: $("#rounds-image-url").value.trim() || null
-      });
+      await rpc("start_game_round",{p_code:roomCode,p_player_name:playerName,p_mode:$(".mode-card.selected")?.dataset.mode||"see",p_clue:clue,p_secret_answer:solution,p_image_url:$("#rounds-image-url").value.trim()||null});
       message("Die Runde läuft. Die Mitspieler können antworten."); await refreshRound();
-    } catch (e) { message("Runde konnte nicht gestartet werden: " + e.message, true); }
+    } catch(e) { message("Runde konnte nicht gestartet werden: "+e.message,true); }
     finally { button.disabled = false; }
   }
   async function submitAnswer() {
-    const answer = $("#rounds-answer").value.trim(); if (!answer) return message("Bitte zuerst eine Antwort eingeben.", true);
-    try { await rpc("submit_game_answer", { p_code: roomCode, p_player_name: playerName, p_answer: answer }); $("#rounds-answer").value = ""; message("Antwort abgegeben. Warte auf die Bewertung des Gastgebers."); await refreshRound(); }
-    catch (e) { message("Antwort konnte nicht gesendet werden: " + e.message, true); }
+    const answer = $("#rounds-answer").value.trim(); if (!answer) return message("Bitte zuerst eine Antwort eingeben.",true);
+    try { await rpc("submit_game_answer",{p_code:roomCode,p_player_name:playerName,p_answer:answer}); $("#rounds-answer").value=""; message("Antwort abgegeben. Warte, bis alle Mitspieler geantwortet haben."); await refreshRound(); }
+    catch(e) { message("Antwort konnte nicht gesendet werden: "+e.message,true); }
   }
   async function finishRound() {
-    try { await rpc("finish_game_round", { p_code: roomCode, p_player_name: playerName }); message("Runde beendet."); await refreshRound(); }
-    catch (e) { message(e.message, true); }
+    try { await rpc("finish_game_round",{p_code:roomCode,p_player_name:playerName}); message("Runde beendet. Der nächste Rundenleiter kann jetzt starten."); await refreshRound(); }
+    catch(e) { message(e.message,true); }
   }
   addCounter();
-  const observer = new MutationObserver(() => { inspectRoom(); });
+  const observer = new MutationObserver(() => inspectRoom());
   const roomPanel = $("#room-panel");
-  if (roomPanel) observer.observe(roomPanel, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-  window.setInterval(inspectRoom, 1000); inspectRoom();
+  if (roomPanel) observer.observe(roomPanel,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});
+  window.setInterval(inspectRoom,1000); inspectRoom();
 })();
