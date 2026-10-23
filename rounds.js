@@ -24,6 +24,7 @@
 
   const style = document.createElement("style");
   style.textContent = `
+    [hidden]{display:none !important}
     #rounds-panel{border-top:0;margin-top:20px;padding:22px;border:1px solid #e8e2ff;border-radius:21px;background:linear-gradient(180deg,#fff,#fdfcff);box-shadow:0 8px 25px #3c2b7208}
     #rounds-panel h3{font:800 25px Outfit,system-ui,sans-serif;margin:0;letter-spacing:-.035em}
     .rounds-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -268,6 +269,8 @@
     if (file.size > 8 * 1024 * 1024) { uploadMessage("Das Bild ist größer als 8 MB. Bitte ein kleineres Bild wählen.", true); return; }
     // Neues Bild bedeutet neue Runde: keine alte Bild-URL oder Zielkreis-Geometrie weiterverwenden.
     $("#rounds-image-url").value = "";
+    const oldPlayImage = $("#rounds-image"); if (oldPlayImage) { oldPlayImage.removeAttribute("src"); oldPlayImage.hidden = true; }
+    const oldPointImage = $("#rounds-point-image"); if (oldPointImage) { oldPointImage.removeAttribute("src"); oldPointImage.hidden = true; }
     targetCircle = null; targetDrawing = false; targetStart = null; targetResize = false;
     const oldPreviewUrl = preview.dataset.objectUrl;
     if (oldPreviewUrl) URL.revokeObjectURL(oldPreviewUrl);
