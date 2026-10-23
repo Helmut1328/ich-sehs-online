@@ -307,7 +307,10 @@
     const pointMode=round.mode==="point";
     const canSeeAnswers=revealed||Boolean(round.is_host);
     $("#rounds-title").textContent=status==="finished"?"Runde beendet":(revealed?"Antworten aufgedeckt":"Runde läuft");
-    $("#rounds-setup").hidden=!isHost||status==="active";
+    const canPrepare = status === "active"
+      ? false
+      : (status === "finished" ? Boolean(isNextHost) : Boolean(isHost));
+    $("#rounds-setup").hidden = !canPrepare;
     $("#rounds-play").hidden=status!=="active"&&status!=="finished";
     $("#rounds-clue-display").textContent=round.clue||"";
     const image=$("#rounds-image");
