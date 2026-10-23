@@ -2,6 +2,8 @@
   const cfg = window.GAME_CONFIG || {};
   const baseUrl = (cfg.SUPABASE_URL || "").replace(/\/+$/, "");
   const key = cfg.SUPABASE_PUBLISHABLE_KEY || "";
+  // Device-Pixel-Ratio für die Canvas-Auflösung; ohne diese Definition bricht resizeCanvas ab.
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   let roomCode = "", playerName = "", isHost = false, refreshTimer = null, refreshing = false;
