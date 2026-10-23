@@ -7,18 +7,6 @@
 
   let selectedMode = "see";
   let activeRoomCode = null;
-  window.roomGameMode = null;
-
-  function applyRoomMode(mode) {
-    if (!["see", "detail"].includes(mode)) return;
-    window.roomGameMode = mode;
-    selectedMode = mode;
-    document.querySelectorAll(".mode-card").forEach((item) => {
-      item.classList.toggle("selected", item.dataset.mode === mode);
-      item.disabled = Boolean(activeRoomCode);
-      item.setAttribute("aria-disabled", String(Boolean(activeRoomCode)));
-    });
-  }
   let refreshTimer = null;
 
   // Anonyme, dauerhafte Kennung dieses Browsers für wiederholten Beitritt.
@@ -170,8 +158,6 @@
       if (room && Array.isArray(room.players)) {
         renderPlayers(room.players);
         $("#room-title").textContent = room.status === "waiting" ? "Warte auf Mitspieler" : "Spielraum";
-        const modeInfo = await rpc("get_game_room_mode", { p_code: activeRoomCode });
-        if (modeInfo && modeInfo.game_mode) applyRoomMode(modeInfo.game_mode);
       }
     } catch (error) {
       console.warn("Raumstatus konnte nicht aktualisiert werden:", error);
@@ -182,13 +168,8 @@
     button.addEventListener("click", () => {
       document.querySelectorAll(".mode-card").forEach((item) => item.classList.remove("selected"));
       button.classList.add("selected");
-      if (activeRoomCode) {
-        setMessage("Der Spielmodus ist für diesen Raum festgelegt und kann hier nicht geändert werden.");
-        return;
-      }
       selectedMode = button.dataset.mode;
-      window.roomGameMode = null;
-      setMessage(`Modus gewählt: ${selectedMode === "see" ? "Ich sehe was …" : "Finde das Detail"}.`);
+      setMessage(`Standardmodus gewählt: ${selectedMode === "see" ? "Ich sehe was …" : "Finde das Detail"}. Den Modus für jede Runde legt der jeweilige Rundenchef im Rundenbereich fest.`);
     });
   });
 
@@ -206,12 +187,6 @@
     try {
       const room = await rpc("create_game_room", { p_name: name });
       if (!room || !room.room_code) throw new Error("Supabase hat keinen Raumcode zurückgegeben.");
-      await rpc("set_game_room_mode", {
-        p_code: room.room_code,
-        p_player_name: name,
-        p_mode: selectedMode
-      });
-      applyRoomMode(selectedMode);
       codeInput.value = room.room_code;
       showRoomPanel(room.room_code, name, room.status);
       setMessage(`Dein Online-Raum ${room.room_code} wurde erstellt. Teile den Code mit deinen Mitspielern.`, "success");
@@ -249,8 +224,6 @@
         p_client_token: getClientToken()
       });
       if (!room || !room.room_code) throw new Error("Supabase hat keine Raumdaten zurückgegeben.");
-      const modeInfo = await rpc("get_game_room_mode", { p_code: room.room_code });
-      applyRoomMode(modeInfo.game_mode || "see");
       showRoomPanel(room.room_code, room.player_name || name, room.status);
       setMessage(
         room.already_joined
@@ -284,8 +257,6 @@
   $("#back-home").addEventListener("click", () => {
     stopRefresh();
     activeRoomCode = null;
-    window.roomGameMode = null;
-    document.querySelectorAll(".mode-card").forEach((item) => { item.disabled = false; item.removeAttribute("aria-disabled"); });
     roomPanel.classList.add("hidden");
     const list = $("#room-player-list");
     if (list) list.remove();
