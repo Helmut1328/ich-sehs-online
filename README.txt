@@ -7,3 +7,5 @@ Enthalten:
 
 Wichtiger Hinweis:
 Die Dateien wurden auf Basis des aktuellen Projektstands erstellt. Die SQL-Migration wurde nicht gegen das Live-Supabase ausgeführt und das Frontend nicht in einem echten Mehrgeräte-Spiel getestet. Vor Veröffentlichung zuerst Sicherung erstellen, Migration ausführen und Test mit mehreren Geräten machen.
+
+Update nach Screenshot-Feedback: doppelte Spielmodus-Auswahl entfernt; die Auswahl oben auf der Startseite steuert den Spielmodus. Zielkreis lässt sich innerhalb verschieben und am Griff in der Größe anpassen. SQL-Migration erweitert die bestehende Mode-Constraint um den neuen Modus.

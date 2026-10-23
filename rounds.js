@@ -86,10 +86,6 @@
       <div class="rounds-top"><div><p class="eyebrow">SPIELRUNDE</p><h3 id="rounds-title">Noch keine Runde gestartet</h3></div><span class="rounds-status">Online</span></div>
       <div id="rounds-setup">
         <p class="rounds-hint">Lege vor dem Start den Spielmodus und die Rundenchef-Regel fest.</p>
-        <div class="rounds-mode-options">
-          <label><input type="radio" name="rounds-mode-choice" value="see" checked><span><b>Antwort erraten</b><br>Mitspieler schreiben ihre Vermutung.</span></label>
-          <label><input type="radio" name="rounds-mode-choice" value="point"><span><b>Finde den Punkt</b><br>Mitspieler tippen auf die gesuchte Stelle im Bild.</span></label>
-        </div>
         <label class="rounds-check"><input id="rounds-rotate-leader" type="checkbox" checked><span><b>Rundenchef wechselt nach jeder Runde</b><br>Deaktivieren, wenn derselbe Rundenchef alle Runden leiten soll.</span></label>
         <label class="rounds-field" for="rounds-image-file">Bild aus Galerie / Dateien auswählen (optional)</label>
         <div class="rounds-file-row"><input id="rounds-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif"><button id="rounds-upload" class="rounds-btn secondary" type="button">Bild hochladen</button></div>
@@ -122,7 +118,6 @@
     $("#rounds-finish").addEventListener("click", finishRound);
     $("#rounds-upload").addEventListener("click", uploadImage);
     $("#rounds-image-file").addEventListener("change", previewSelectedImage);
-    $$('input[name="rounds-mode-choice"]').forEach(el => el.addEventListener("change", updateModeSetup));
     $("#rounds-image-url").addEventListener("input", syncTargetImage);
     $("#rounds-target-canvas").addEventListener("pointerdown", targetPointerDown);
     $("#rounds-target-canvas").addEventListener("pointermove", targetPointerMove);
@@ -132,7 +127,10 @@
     updateModeSetup();
   }
 
-  function selectedMode() { return $('input[name="rounds-mode-choice"]:checked')?.value || "see"; }
+  function selectedMode() {
+    const chosen = $(".mode-card.selected")?.dataset.mode || "see";
+    return chosen === "detail" ? "point" : "see";
+  }
   function updateModeSetup() {
     const pointMode = selectedMode() === "point";
     $("#rounds-target-editor").hidden = !pointMode;
@@ -179,19 +177,26 @@
     e.preventDefault(); canvas.setPointerCapture?.(e.pointerId);
     const b=canvas.getBoundingClientRect(), x=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)), y=Math.max(0,Math.min(1,(e.clientY-b.top)/b.height));
     const w=b.width,h=b.height;
+    let moveCircle = false;
     if(targetCircle){
       const cx=targetCircle.x*w,cy=targetCircle.y*h,rr=targetCircle.r*Math.min(w,h);
       const hx=cx+rr*.707,hy=cy+rr*.707;
-      targetResize=Math.hypot(e.clientX-b.left-hx,e.clientY-b.top-hy)<22;
+      const px=e.clientX-b.left,py=e.clientY-b.top;
+      targetResize=Math.hypot(px-hx,py-hy)<22;
+      moveCircle=!targetResize && Math.hypot(px-cx,py-cy)<=rr;
     } else targetResize=false;
-    targetDrawing=true; targetStart={x,y,px:e.clientX-b.left,py:e.clientY-b.top};
-    if(!targetResize) targetCircle={x,y,r:0.01};
+    targetDrawing=true;
+    targetStart={x,y,px:e.clientX-b.left,py:e.clientY-b.top,moveCircle,original:targetCircle?{...targetCircle}:null};
+    if(!targetResize&&!moveCircle) targetCircle={x,y,r:0.01};
   }
   function targetPointerMove(e) {
     if(!targetDrawing||!targetStart) return;
     const b=$("#rounds-target-canvas").getBoundingClientRect(), px=e.clientX-b.left,py=e.clientY-b.top;
     if(targetResize&&targetCircle){
       targetCircle.r=Math.max(.015,Math.min(.5,Math.hypot(px-targetCircle.x*b.width,py-targetCircle.y*b.height)/Math.min(b.width,b.height)));
+    } else if(targetStart.moveCircle&&targetStart.original){
+      targetCircle.x=Math.max(targetCircle.r,Math.min(1-targetCircle.r,targetStart.original.x+(px-targetStart.px)/b.width));
+      targetCircle.y=Math.max(targetCircle.r,Math.min(1-targetCircle.r,targetStart.original.y+(py-targetStart.py)/b.height));
     } else {
       targetCircle.x=targetStart.x;targetCircle.y=targetStart.y;
       targetCircle.r=Math.max(.015,Math.min(.5,Math.hypot(px-targetStart.px,py-targetStart.py)/Math.min(b.width,b.height)));
