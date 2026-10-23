@@ -311,7 +311,8 @@
     $("#rounds-play").hidden=status!=="active"&&status!=="finished";
     $("#rounds-clue-display").textContent=round.clue||"";
     const image=$("#rounds-image");
-    if(round.image_url){image.src=round.image_url;image.hidden=pointMode;image.onerror=()=>{image.hidden=true;};}
+    // Im Punktmodus wird nur das interaktive Bild gerendert, nicht zusätzlich das normale Bild.
+    if(round.image_url && !pointMode){image.src=round.image_url;image.hidden=false;image.onerror=()=>{image.hidden=true;};}
     else{image.removeAttribute("src");image.hidden=true;}
     $("#rounds-point-play").hidden=!pointMode;
     if(pointMode){
