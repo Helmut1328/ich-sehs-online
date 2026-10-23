@@ -206,7 +206,9 @@
   }
   function targetPointerUp() { targetDrawing=false;targetStart=null;targetResize=false; }
   async function pointPointerDown(e) {
-    if(isHost || pointSubmitted) return;
+    if (pointSubmitted) return;
+    const currentRoundHost = $("#rounds-point-wrap")?.classList.contains("point-host");
+    if (currentRoundHost) return;
     const roundMode = $("#rounds-point-play") && !$("#rounds-point-play").hidden;
     if(!roundMode) return;
     const canvas=$("#rounds-point-canvas"),b=canvas.getBoundingClientRect();
@@ -311,7 +313,7 @@
       ? false
       : (status === "finished" ? Boolean(isNextHost) : Boolean(isHost));
     $("#rounds-setup").hidden = !canPrepare;
-    $("#rounds-play").hidden = status !== "active";
+    $("#rounds-play").hidden=status!=="active"&&status!=="finished";
     $("#rounds-clue-display").textContent=round.clue||"";
     const image=$("#rounds-image");
     // Im Punktmodus wird nur das interaktive Bild gerendert, nicht zusätzlich das normale Bild.
@@ -322,7 +324,9 @@
       const pointImg=$("#rounds-point-image");
       if(round.image_url&&pointImg.src!==round.image_url){pointImg.onload=()=>drawPlayerPoint(round);pointImg.src=round.image_url;pointImg.hidden=false;}
       else if(round.image_url){pointImg.hidden=false;drawPlayerPoint(round);}
-      $("#rounds-point-wrap").classList.toggle("point-player",!Boolean(round.is_host));
+      const pointWrap = $("#rounds-point-wrap");
+      pointWrap.classList.toggle("point-player", !Boolean(round.is_host));
+      pointWrap.classList.toggle("point-host", Boolean(round.is_host));
       pointSubmitted=Boolean(round.my_point_submitted);
       $("#rounds-point-status").textContent=round.is_host?"Du leitest diese Runde. Die Tipps der Mitspieler werden nach und nach erfasst.":(pointSubmitted?"Tipp abgegeben! Warte auf die anderen Mitspieler.":"Tippe einmal auf die vermutete Stelle im Bild.");
       drawPlayerPoint(round);
