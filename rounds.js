@@ -36,6 +36,11 @@
     .rounds-answer b,.rounds-answer small{display:block}.rounds-answer small{color:#79758d;margin-top:4px}
     .rounds-image{display:block;max-width:100%;max-height:360px;object-fit:contain;border-radius:12px;margin:14px auto}
     .rounds-status{font-size:11px;font-weight:800;border-radius:999px;padding:7px 10px;background:#e2f9ec;color:#168352}
+    .rounds-reactions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .rounds-reaction{border:1px solid #e2def2;background:#fff;border-radius:10px;padding:7px 10px;cursor:pointer;font-size:18px;line-height:1.2}
+    .rounds-reaction.selected{border-color:#6c4cf1;background:#eeeaff;box-shadow:0 0 0 1px #6c4cf1}
+    .rounds-reaction:disabled{opacity:.55;cursor:default}
+    .rounds-waiting{padding:12px;border-radius:12px;background:#fff7e6;color:#79521a;font-size:13px;line-height:1.5}
     .rounds-file-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
     .rounds-file-row input[type=file]{max-width:100%;font-size:12px}
     .rounds-preview{display:block;max-width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin:10px 0}
@@ -83,7 +88,7 @@
       <div id="rounds-play" hidden>
         <img id="rounds-image" class="rounds-image" alt="Bild der Spielrunde" hidden><p id="rounds-clue-display" class="rounds-clue"></p>
         <div id="rounds-answer-entry"><label class="rounds-field" for="rounds-answer">Deine Antwort</label><input id="rounds-answer" class="rounds-input" maxlength="100" placeholder="Was vermutest du?"><button id="rounds-submit" class="rounds-btn secondary" type="button">Antwort senden</button></div>
-        <p class="rounds-field">Antworten der Mitspieler</p><div id="rounds-answers"></div><p id="rounds-solution-display" class="rounds-hint"></p>
+        <p class="rounds-field">Antworten der Mitspieler</p><p id="rounds-reveal-status" class="rounds-waiting" hidden></p><div id="rounds-answers"></div><p id="rounds-solution-display" class="rounds-hint"></p>
         <button id="rounds-finish" class="rounds-btn secondary" type="button">Runde beenden</button>
       </div><p id="rounds-message" class="rounds-hint" role="status"></p>`;
     const actions = $(".room-actions", panel); if (actions) actions.before(section); else panel.appendChild(section);
@@ -160,25 +165,58 @@
   function renderRound(round) {
     if (Array.isArray(round)) round = round[0] || null;
     if (!round) { $("#rounds-title").textContent = "Noch keine Runde gestartet"; $("#rounds-play").hidden = true; $("#rounds-setup").hidden = !isHost; return; }
-    $("#rounds-title").textContent = round.status === "finished" ? "Runde beendet" : "Runde läuft";
-    $("#rounds-setup").hidden = !isHost || round.status === "active";
-    $("#rounds-play").hidden = round.status !== "active" && round.status !== "finished";
+    const status = round.status || "active";
+    const revealed = Boolean(round.answers_revealed) || status === "finished";
+    const allAnswered = Boolean(round.all_players_answered) || revealed;
+    $("#rounds-title").textContent = status === "finished" ? "Runde beendet" : (revealed ? "Antworten aufgedeckt" : "Runde läuft");
+    $("#rounds-setup").hidden = !isHost || status === "active";
+    $("#rounds-play").hidden = status !== "active" && status !== "finished";
     $("#rounds-clue-display").textContent = round.clue || "";
     const image = $("#rounds-image");
     if (round.image_url) { image.src = round.image_url; image.hidden = false; image.onerror = () => { image.hidden = true; }; }
     else { image.removeAttribute("src"); image.hidden = true; }
-    $("#rounds-answer-entry").hidden = isHost || round.status !== "active";
-    $("#rounds-finish").hidden = !isHost || round.status !== "active";
-    $("#rounds-solution-display").textContent = round.secret_answer ? `Richtige Lösung: ${round.secret_answer}` : (round.status === "finished" ? "Die Runde ist beendet." : "");
+    $("#rounds-answer-entry").hidden = isHost || status !== "active" || Boolean(round.my_answer_submitted);
+    $("#rounds-finish").hidden = !isHost || status !== "active";
+    const revealStatus = $("#rounds-reveal-status");
+    revealStatus.hidden = revealed;
+    revealStatus.textContent = revealed ? "" : (allAnswered ? "Alle Antworten sind eingegangen. Die Antworten werden aufgedeckt …" : "Die Antworten bleiben geheim, bis alle Mitspieler geantwortet haben.");
+    $("#rounds-solution-display").textContent = round.secret_answer ? `Richtige Lösung: ${round.secret_answer}` : (status === "finished" ? "Die Runde ist beendet." : "");
     const list = $("#rounds-answers"); list.replaceChildren();
+    if (!revealed) return;
     (round.answers || []).forEach(answer => {
       const row = document.createElement("div"); row.className = "rounds-answer";
       const info = document.createElement("span"), name = document.createElement("b"), value = document.createElement("small");
-      name.textContent = answer.player_name; value.textContent = `${answer.answer} · ${answer.is_correct ? "Richtig ✓" : "Noch nicht bewertet"}`; info.append(name, value); row.appendChild(info);
-      if (isHost && !answer.is_correct && answer.answer && round.status === "active") {
-        const button = document.createElement("button"); button.className = "rounds-btn secondary"; button.textContent = "Als richtig markieren";
-        button.addEventListener("click", async () => { try { await rpc("mark_game_answer_correct", { p_code: roomCode, p_host_name: playerName, p_answer_player_name: answer.player_name }); await refreshRound(); } catch (e) { message(e.message, true); } });
-        row.appendChild(button);
+      name.textContent = answer.player_name;
+      value.textContent = `${answer.answer} · ${answer.is_correct ? "Richtig ✓" : answer.is_correct === false && answer.reviewed ? "Falsch ✕" : "Noch nicht bewertet"}`;
+      info.append(name, value);
+      if (Array.isArray(answer.reactions) && answer.reactions.length) {
+        const counts = answer.reactions.reduce((acc, item) => { acc[item.emoji] = (acc[item.emoji] || 0) + 1; return acc; }, {});
+        const reactionSummary = document.createElement("small");
+        reactionSummary.textContent = Object.entries(counts).map(([emoji, count]) => `${emoji} ${count}`).join(" · ");
+        info.appendChild(reactionSummary);
+      }
+      row.appendChild(info);
+      if (!isHost && status === "active") {
+        const reactions = document.createElement("div"); reactions.className = "rounds-reactions"; reactions.setAttribute("aria-label", `Emoji-Reaktion auf die Antwort von ${answer.player_name}`);
+        ["😂", "👍", "👎", "❤️", "🤔"].forEach(emoji => {
+          const button = document.createElement("button"); button.type = "button"; button.className = "rounds-reaction"; button.textContent = emoji; button.title = `Mit ${emoji} reagieren`;
+          if (answer.my_reaction === emoji) button.classList.add("selected");
+          button.addEventListener("click", async () => {
+            reactions.querySelectorAll("button").forEach(b => b.disabled = true);
+            try { await rpc("set_game_answer_reaction", { p_code: roomCode, p_player_name: playerName, p_answer_player_name: answer.player_name, p_reaction: emoji }); await refreshRound(); }
+            catch (e) { message(e.message, true); reactions.querySelectorAll("button").forEach(b => b.disabled = false); }
+          });
+          reactions.appendChild(button);
+        });
+        row.appendChild(reactions);
+      }
+      if (isHost && !answer.is_correct && !answer.reviewed && answer.answer && status === "active") {
+        const actions = document.createElement("div"); actions.className = "rounds-reactions";
+        const correct = document.createElement("button"); correct.className = "rounds-btn secondary"; correct.textContent = "✓ Richtig";
+        correct.addEventListener("click", async () => { try { await rpc("mark_game_answer_correct", { p_code: roomCode, p_host_name: playerName, p_answer_player_name: answer.player_name }); await refreshRound(); } catch (e) { message(e.message, true); } });
+        const wrong = document.createElement("button"); wrong.className = "rounds-btn secondary"; wrong.textContent = "✕ Falsch";
+        wrong.addEventListener("click", async () => { try { await rpc("mark_game_answer_wrong", { p_code: roomCode, p_host_name: playerName, p_answer_player_name: answer.player_name }); await refreshRound(); } catch (e) { message(e.message, true); } });
+        actions.append(correct, wrong); row.appendChild(actions);
       }
       list.appendChild(row);
     });
