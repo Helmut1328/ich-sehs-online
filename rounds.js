@@ -311,7 +311,7 @@
       ? false
       : (status === "finished" ? Boolean(isNextHost) : Boolean(isHost));
     $("#rounds-setup").hidden = !canPrepare;
-    $("#rounds-play").hidden=status!=="active"&&status!=="finished";
+    $("#rounds-play").hidden = status !== "active";
     $("#rounds-clue-display").textContent=round.clue||"";
     const image=$("#rounds-image");
     // Im Punktmodus wird nur das interaktive Bild gerendert, nicht zusätzlich das normale Bild.
