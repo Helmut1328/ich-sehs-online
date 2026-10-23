@@ -23,13 +23,13 @@
 
   const style = document.createElement("style");
   style.textContent = `
-    #rounds-panel{border-top:1px solid #e9e5f6;margin-top:20px;padding-top:18px}
-    #rounds-panel h3{font:700 18px Outfit,system-ui,sans-serif;margin:0}
+    #rounds-panel{border-top:0;margin-top:20px;padding:22px;border:1px solid #e8e2ff;border-radius:21px;background:linear-gradient(180deg,#fff,#fdfcff);box-shadow:0 8px 25px #3c2b7208}
+    #rounds-panel h3{font:800 25px Outfit,system-ui,sans-serif;margin:0;letter-spacing:-.035em}
     .rounds-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
     .rounds-hint{font-size:12px;line-height:1.5;color:#79758d}
     .rounds-field{margin:12px 0 7px;display:block;font-size:12px;font-weight:800}
-    .rounds-input{width:100%;box-sizing:border-box;border:1.5px solid #e9e5f6;border-radius:12px;padding:12px;background:#fcfbff;font:inherit;color:#201b36}
-    .rounds-btn{border:0;border-radius:12px;padding:12px 15px;background:#6c4cf1;color:white;font:700 13px system-ui;cursor:pointer;margin-top:12px}
+    .rounds-input{width:100%;box-sizing:border-box;border:1.5px solid #e5dfff;border-radius:14px;padding:14px 15px;background:#fbfaff;font:inherit;color:#201b36}
+    .rounds-btn{border:0;border-radius:13px;padding:12px 15px;background:#6948f5;color:white;font:700 13px system-ui;cursor:pointer;margin-top:12px;transition:transform .15s,box-shadow .15s}
     .rounds-btn.secondary{background:#eeeaff;color:#5033d1}
     .rounds-btn:disabled{opacity:.5}
     .rounds-clue{background:#f7f5ff;padding:14px;border-radius:12px;font-weight:700;line-height:1.5}
@@ -50,12 +50,13 @@
     .rounds-mode-options label{display:flex;gap:8px;align-items:flex-start;border:1px solid #e2def2;border-radius:12px;padding:10px;font-size:12px;line-height:1.4;cursor:pointer}
     .rounds-mode-options input{margin-top:2px}
     .rounds-check{display:flex;align-items:flex-start;gap:9px;margin:12px 0;font-size:13px;line-height:1.4}
-    .rounds-target-editor{margin-top:12px;padding:12px;border:1px solid #e9e5f6;border-radius:12px}
+    .rounds-target-editor{margin-top:12px;padding:16px;border:1px solid #e5dfff;border-radius:16px;background:#f7f5ff}
     .rounds-image-wrap{position:relative;display:inline-block;max-width:100%;line-height:0;vertical-align:top}
     .rounds-image-wrap img{display:block;max-width:100%;max-height:360px;width:auto;height:auto;object-fit:contain;border-radius:10px}
     .rounds-image-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
     .rounds-image-wrap.point-player canvas{touch-action:none}
-    @media(max-width:650px){.rounds-answer{flex-direction:column}.rounds-answer .rounds-btn{width:100%}.rounds-mode-options{grid-template-columns:1fr}}
+    .rounds-top{padding-bottom:18px;border-bottom:1px solid #eeeaff;margin-bottom:18px}.rounds-top .eyebrow{background:#f0ebff;border-radius:999px;padding:7px 10px;display:inline-block}.rounds-hint{font-size:13px;line-height:1.55;color:#777493}.rounds-status{background:#e5fbef;color:#168352}.rounds-image{max-height:520px;border-radius:16px;box-shadow:0 8px 24px #2d225010}.rounds-clue{background:#f4f0ff;padding:17px;border:1px solid #e6ddff;border-radius:15px}.rounds-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px #6948f52c}
+    @media(max-width:760px){#rounds-panel{padding:16px}.rounds-panel h3{font-size:21px}.rounds-answer{flex-direction:column}.rounds-answer .rounds-btn{width:100%}.rounds-mode-options{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
 
@@ -116,8 +117,8 @@
     const actions = $(".room-actions", panel); if (actions) actions.before(section); else panel.appendChild(section);
     $("#rounds-start").addEventListener("click", startRound);
     $("#rounds-mode-select").addEventListener("change", updateModeSetup);
-    const initialMode = $(".mode-card.selected")?.dataset.mode || "see";
-    $("#rounds-mode-select").value = initialMode === "detail" || initialMode === "point" ? "point" : "see";
+    // Modusauswahl erfolgt ausschließlich in der Vorbereitung jeder einzelnen Runde.
+    $("#rounds-mode-select").value = "see";
     $("#rounds-submit").addEventListener("click", submitAnswer);
     $("#rounds-finish").addEventListener("click", finishRound);
     $("#rounds-upload").addEventListener("click", uploadImage);
