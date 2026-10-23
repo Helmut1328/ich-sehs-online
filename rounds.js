@@ -24,7 +24,6 @@
 
   const style = document.createElement("style");
   style.textContent = `
-    [hidden]{display:none !important}
     #rounds-panel{border-top:0;margin-top:20px;padding:22px;border:1px solid #e8e2ff;border-radius:21px;background:linear-gradient(180deg,#fff,#fdfcff);box-shadow:0 8px 25px #3c2b7208}
     #rounds-panel h3{font:800 25px Outfit,system-ui,sans-serif;margin:0;letter-spacing:-.035em}
     .rounds-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -160,8 +159,6 @@
   function resizeCanvas(canvas, img) {
     if (!canvas || !img || !img.naturalWidth || !img.clientWidth) return;
     const rect = img.getBoundingClientRect();
-    // Device-Pixel-Ratio für scharfe Canvas-Darstellung; immer lokal definiert.
-    const dpr = Math.max(1, Number(window.devicePixelRatio) || 1);
     // Canvas muss pixelgenau über der tatsächlich sichtbaren Bildfläche liegen.
     const wrap = canvas.parentElement;
     if (wrap) { wrap.style.width = `${rect.width}px`; wrap.style.height = `${rect.height}px`; }
@@ -267,16 +264,7 @@
     if (!file || !preview) { if (preview) preview.hidden = true; return; }
     if (!file.type.startsWith("image/")) { uploadMessage("Bitte eine Bilddatei auswählen.", true); return; }
     if (file.size > 8 * 1024 * 1024) { uploadMessage("Das Bild ist größer als 8 MB. Bitte ein kleineres Bild wählen.", true); return; }
-    // Neues Bild bedeutet neue Runde: keine alte Bild-URL oder Zielkreis-Geometrie weiterverwenden.
-    $("#rounds-image-url").value = "";
-    const oldPlayImage = $("#rounds-image"); if (oldPlayImage) { oldPlayImage.removeAttribute("src"); oldPlayImage.hidden = true; }
-    const oldPointImage = $("#rounds-point-image"); if (oldPointImage) { oldPointImage.removeAttribute("src"); oldPointImage.hidden = true; }
-    targetCircle = null; targetDrawing = false; targetStart = null; targetResize = false;
-    const oldPreviewUrl = preview.dataset.objectUrl;
-    if (oldPreviewUrl) URL.revokeObjectURL(oldPreviewUrl);
-    const objectUrl = URL.createObjectURL(file);
-    preview.dataset.objectUrl = objectUrl;
-    preview.src = objectUrl; preview.hidden = false;
+    preview.src = URL.createObjectURL(file); preview.hidden = false;
     preview.onload = () => syncTargetImage();
     syncTargetImage();
     uploadMessage(`${file.name} ausgewählt (${(file.size / 1024 / 1024).toFixed(1)} MB). Klicke auf „Bild hochladen“.`);
